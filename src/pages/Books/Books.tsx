@@ -1,18 +1,58 @@
-import { useEffect,useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
+import { googleBooksApi } from '../../services/googleBooksApi'
+import { Thumbnail } from '../../components/Thumbnail'
 
-export function Books () {
-  const [count, setCount] = useState(0)
+import { BookState as Book} from '../BookDatail'
+
+import { Container, Title, Subtitle } from './Books.styles'
+
+
+interface BooksState {
+  totalItems: number
+  items: Book[]
+}
+
+export function Books() {
+  const [books, setBooks] = useState<BooksState | null>(null)
+  const params = useSearchParams()
+  const location = useLocation()
+
+  const [searchParams] = params
+  const q = searchParams.get('q')
 
   useEffect(() => {
-    console.log('Efeito')
+    googleBooksApi
+      .get(`/v1/volumes?q=${q}&maxResults=20`)
+      .then((response) => setBooks(response.data))
+  }, [q])
 
-    return() => console.log('teste de retirada')
-  } 
-  , [])
+  if (!q) {
+    return <Navigate to="/" state={{ from: location }} replace />
+  }
+
   return (
-    <>
-      <span>{count} </span>
-      <button onClick={() => setCount(count + 1)}>Increment </button>
-    </>
+    <Container>
+      <Title>Resultado da sua busca</Title>
+
+      {books && (
+        <ul>
+          {books.items.map((book) => (
+            <li key={book.id}>
+              <Link to={`/books/${book.id}`}>
+                <Thumbnail
+                  thumbnail={book.volumeInfo.imageLinks?.thumbnail}
+                  title={book.volumeInfo.title}
+                  bgColor="#d9d9d9"
+                />
+
+                <Title>{book.volumeInfo.title}</Title>
+                <Subtitle>{book.volumeInfo.subtitle}</Subtitle>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Container>
   )
 }
